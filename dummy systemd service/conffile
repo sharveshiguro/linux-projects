@@ -1,0 +1,6 @@
+/etc/rsyslog.d/30-dummy.conf
+
+if $programname == 'dummy.service' then {
+	action(type="omfile" file="/var/log/dummy.log")
+	stop
+}
