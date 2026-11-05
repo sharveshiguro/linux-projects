@@ -1,0 +1,71 @@
+Requirements
+Create a script called dummy.sh that keeps running forever and writes a message to the log file every 10 seconds simulating an application running in the background.
+
+i created a shellscript dummy.sh
+  it contained a for loop which had a simple print message and a sleep timer
+made the file executable using chmod +x dummy.sh
+
+then i looked up how to create a systemd service 
+i created a file called dummy.service under /etc/systemd/system/
+
+the boilerplate has 3 sections 
+1.Unit - has description of the service and makes sure it only launches after its targets are ready
+2.Service - defines the user and group that executes the file. auto-restart enabled if system crashes or quits. locates the shell script that runs and redirected the output to /var/log/dummy.log 
+3.Install - specifies target system state (ex multi-user.target => multi user non graphical boot)
+
+then i created a log while where the output is stored under /var/log/
+
+then i reloaded the daemon using sudo systemctl reload-daemon
+then enabled the service using sudo systemctl enable dummy.service
+then i started the service using sudo systemctl start dummy.service
+then i checked the status using sudo systemctl status dummy.service
+
+i got a permission error which i checked using sudo journalctl -u dummy.service -f
+it was because /var/log could only be accessed by an account with root privileges
+
+then i realised i gave dummy.service my user account as user
+  and since it was bad practice to give the service root as user and group i thought of creating its own user
+
+sudo useradd -r -s /bin/false dummyuser
+  • -r: Creates a system user (no home directory created by default, lower UID).
+  • -s /bin/false: Prevents anyone from logging into a shell as this user.
+
+then i gave the dummyuser ownership to script 
+sudo chown dummyuser:dummyuser dummy.sh
+
+then i had to change user and group in /etc/systemd/system/dummy.service
+then i had to reload the daemon and restart the service to persist changes
+
+then i looked up that most services do logs not by redirecting echo statement to log file but by defining Standard Output and Standard Error under service section of .service file
+  
+StandardOutput=journal
+StandardError=journal
+
+reloaded daemon and restarted service
+  
+but it was not enough to get it in the log file i had created
+i had to create a rsyslog rule to identify and catch the logs and add an identifier in the service for ID
+
+sudo nano /etc/rsyslog.d/30-dummy.conf
+  
+in dummy.service file under service section 
+  SyslogIdentifier=dummy-service
+
+reloaded daemon and restarted service and rsyslog
+sudo systemctl restart rsyslog
+
+then i discovered systemd does not have permission for the sh file (it needs to have access to its parent directories as well) 
+so i moved it from home directory to /usr/local/bin/dummy.sh
+gave root access 
+sudo chown root:root /usr/local/bin/dummy.sh
+sudo chmod +x /usr/local/bin/dummy.sh
+
+then i changed ExecStart line to point to new dummy.sh location in dummy.service file
+
+(script remains unprivileged. 
+It simply talks to the console. 
+The system's built-in, trusted logging engine (rsyslog) acts as a secure intermediary. 
+Because rsyslog runs securely as root, it catches your script's output and safely writes it to /var/log/dummy.log on your script's behalf.)
+
+reloaded daemon, restarted service and rsyslog and it was functional.
+  
