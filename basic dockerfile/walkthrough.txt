@@ -1,0 +1,30 @@
+Requirements
+    The Dockerfile should be named Dockerfile.
+    The Dockerfile should be in the root directory of the project.
+    The base image should be alpine:latest.
+    The Dockerfile should contain a single instruction to print "Hello, Captain!" to the console before exiting.
+
+I first created a file called Dockerfile in my home directory
+Then i looked up a DOckerfile template 
+
+The first line should be the base image 
+  alpine:latest
+
+Then i looked for how to run the print command and found that it can be run using CMD command
+
+i made a slight error in the syntax 
+ran it anyway using 
+docker build -t my-alpine-app:1.0 .
+docker run -d -p 8080:8080 --name my-container my-alpine-app:1.0
+
+since i ran it on a port after making changes i found how to remove it
+run docker using --rm flag so that it removes the container after running and its not persistent 
+running using a port will persist and its not ideal in this case
+
+running them both together docker run -d --rm -p 8080:8080 makes it run quietly in the bg 
+when you run docker stop my-container docker removes it immediately
+clean all stopped containers at once using: 
+docker container prune -f
+
+
+
